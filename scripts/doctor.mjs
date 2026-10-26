@@ -1,5 +1,6 @@
 // `npm run doctor`: checks this computer has what the chosen apps need, and
 // says in plain words how to fix anything missing.
+//   npm run doctor -- --json    the same checks as JSON (for scripts and installers)
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import os from 'node:os'
@@ -8,20 +9,23 @@ import { fromRoot, installedApps, isMac, readConfig } from './lib/project.mjs'
 
 const config = readConfig()
 const apps = installedApps()
-let problems = 0
+const asJson = process.argv.includes('--json')
+const checks = []
+let currentSection = ''
 
 const output = (command, args = ['--version']) => {
   const result = spawnSync(command, args, { encoding: 'utf8', shell: process.platform === 'win32' })
   return result.status === 0 ? `${result.stdout}${result.stderr}`.trim().split('\n')[0] : null
 }
 
-const ok = (label, detail = '') => console.log(`  ✔ ${label}${detail ? `  (${detail})` : ''}`)
-const bad = (label, fix) => {
-  problems++
-  console.log(`  ✖ ${label}\n      → ${fix}`)
+const record = (status, label, extra = {}) => checks.push({ section: currentSection, status, label, ...extra })
+const ok = (label, detail) => record('ok', label, { detail })
+const bad = (label, fix) => record('error', label, { fix })
+const warn = (label, fix) => record('warn', label, { fix })
+const info = (label) => record('info', label)
+const section = (title) => {
+  currentSection = title
 }
-const warn = (label, fix) => console.log(`  ! ${label}\n      → ${fix}`)
-const section = (title) => console.log(`\n${title}`)
 
 section('Basics')
 const nodeMajor = Number(process.versions.node.split('.')[0])
@@ -35,8 +39,8 @@ config.setupComplete ? ok('Setup done', config.name) : warn('Setup not run yet',
 if (apps.mobile === 'expo') {
   section('Mobile app (Expo)')
   ok('Nothing to install on this computer')
-  console.log('    On your phone: install "Expo Go" from the App Store / Google Play.')
-  console.log('    Phone and computer must be on the same Wi-Fi. Then run: npm run dev:mobile')
+  info('On your phone: install "Expo Go" from the App Store / Google Play.')
+  info('Phone and computer must be on the same Wi-Fi. Then run: npm run dev:mobile')
 }
 
 if (apps.mobile === 'emulator') {
@@ -110,9 +114,28 @@ if (apps.docker) {
   else ok('Docker running', docker)
 }
 
-console.log(
-  problems
-    ? `\n${problems} thing(s) to fix. Paste this output to your AI assistant if you need help.\n`
-    : '\nEverything looks good.\n'
-)
-process.exit(problems ? 1 : 0)
+const problems = checks.filter((check) => check.status === 'error').length
+
+if (asJson) {
+  console.log(JSON.stringify({ ok: problems === 0, problems, checks }, null, 2))
+} else {
+  let lastSection
+  for (const check of checks) {
+    if (check.section !== lastSection) console.log(`\n${check.section}`)
+    lastSection = check.section
+    if (check.status === 'info') {
+      console.log(`    ${check.label}`)
+      continue
+    }
+    const icon = { ok: '✔', warn: '!', error: '✖' }[check.status]
+    console.log(`  ${icon} ${check.label}${check.detail ? `  (${check.detail})` : ''}`)
+    if (check.fix) console.log(`      → ${check.fix}`)
+  }
+  console.log(
+    problems
+      ? `\n${problems} thing(s) to fix. Paste this output to your AI assistant if you need help.\n`
+      : '\nEverything looks good.\n'
+  )
+}
+// exitCode (not exit()) so piped --json output is fully flushed first.
+process.exitCode = problems ? 1 : 0

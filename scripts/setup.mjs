@@ -81,14 +81,32 @@ const stopIfCancelled = (value) => {
 // ---------------------------------------------------------------------------
 
 async function askQuestions(current) {
-  const name = stopIfCancelled(
-    await p.text({
-      message: 'What is your app called?',
-      placeholder: 'My App',
-      initialValue: current.name,
-      validate: (value) => (value.trim() ? undefined : 'Give your app a name (you can change it later)')
+  const name =
+    stopIfCancelled(
+      await p.text({
+        message: 'What is your app called? (press Enter to keep the grey name)',
+        // A placeholder, not an initialValue: typing replaces it instead of appending to it.
+        placeholder: current.name,
+        defaultValue: current.name
+      })
+    ).trim() || current.name
+
+  const setupMode = stopIfCancelled(
+    await p.select({
+      message: 'How do you want to set up?',
+      options: [
+        {
+          value: 'quick',
+          label: 'Quick setup (recommended)',
+          hint: 'we pick the best options for you. Nothing extra to install.'
+        },
+        { value: 'custom', label: 'Custom', hint: 'choose the look, mobile emulators, desktop app, Docker, ...' }
+      ],
+      // A second run is usually to change something specific.
+      initialValue: current.setupComplete ? 'custom' : 'quick'
     })
-  ).trim()
+  )
+  if (setupMode === 'quick') return quickAnswers(name, current)
 
   const targetList = stopIfCancelled(
     await p.multiselect({
@@ -275,6 +293,45 @@ async function askQuestions(current) {
     api: { mode: apiMode, baseUrl },
     docker,
     demo
+  }
+}
+
+/**
+ * Quick setup: one question, beginner-friendly defaults for everything else.
+ * Mobile means Expo (just the free Expo Go app on your phone, no Android
+ * Studio or Xcode). On a re-run, earlier choices (an emulator app, the
+ * desktop app, Docker, the look) are kept so nothing gets deleted.
+ */
+async function quickAnswers(name, current) {
+  const building = stopIfCancelled(
+    await p.select({
+      message: 'What are you building?',
+      options: [
+        { value: 'web', label: 'A website', hint: 'opens in any browser' },
+        {
+          value: 'web+mobile',
+          label: 'A website and a mobile app',
+          hint: 'test the app on your own phone with the free Expo Go app'
+        },
+        { value: 'mobile', label: 'Just a mobile app', hint: 'iPhone and Android, via Expo Go' }
+      ],
+      initialValue: current.targets.mobile ? (current.targets.web ? 'web+mobile' : 'mobile') : 'web'
+    })
+  )
+  const wantsMobile = building !== 'web'
+  return {
+    name,
+    targets: { web: building !== 'mobile', mobile: wantsMobile, desktop: current.targets.desktop },
+    mobile: !wantsMobile
+      ? { type: 'none', platforms: [] }
+      : current.mobile.type === 'none'
+        ? { type: 'expo', platforms: ['android', 'ios'] }
+        : current.mobile,
+    appId: current.setupComplete ? current.appId : defaultAppId(name),
+    theme: current.theme,
+    api: current.api,
+    docker: current.docker,
+    demo: current.demo !== false
   }
 }
 
