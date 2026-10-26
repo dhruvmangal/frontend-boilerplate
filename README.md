@@ -23,14 +23,17 @@ You should see a number like `v22.x`. Any number 20 or higher is fine.
 
 **2. Open this folder in a terminal.** In VS Code or Cursor: _Terminal → New Terminal_.
 
-**3. Run the setup wizard.** It asks a few questions (app name, website / mobile /
-desktop, colors, Docker...) and adds only what you pick:
+**3. Run the setup wizard.** It asks your app's name, then offers **Quick setup**:
 
 ```bash
 npm run setup
 ```
 
-Not sure about a question? Press Enter: the default is the safe choice.
+Not sure? Press Enter at every question. Quick setup only asks what you're
+building (a website, a mobile app, or both) and picks safe choices for the rest:
+fake data built in, a mobile app you test on your own phone with the free
+_Expo Go_ app, and nothing extra to install. Choose **Custom** instead to pick
+the colors, a phone emulator, a desktop app or Docker yourself.
 
 **4. Start your app:**
 
@@ -73,6 +76,7 @@ All commands: [docs/commands.md](docs/commands.md).
 
 | Question                                | In plain words                                                                                                                                                                                                                                                                                   |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Quick or Custom?**                    | **Quick** asks one more question (website, mobile app or both) and picks the beginner-friendly answer for everything below. **Custom** asks them all.                                                                                                                                            |
 | **Where should your app run?**          | Website, phone app, computer app, or any mix.                                                                                                                                                                                                                                                    |
 | **Expo or Emulator?** (mobile only)     | **Expo**: test on your real phone with the free _Expo Go_ app; nothing else to install. The phone screens are written separately from the website. **Emulator**: the phone app _is_ your website wrapped in an app, so you build screens once. Testing needs Android Studio (or Xcode on a Mac). |
 | **App ID**                              | A unique name app stores use, like `com.yourname.recipes`. Only matters when you publish.                                                                                                                                                                                                        |

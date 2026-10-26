@@ -31,7 +31,8 @@ to keep the project tidy, working and consistent.
 
 To add or remove an app, run the wizard (`npm run setup`, or
 `npm run setup -- --answers '<json>' [--force]` without a keyboard; see
-`scripts/setup.mjs`). Never copy `templates/` by hand.
+`scripts/setup.mjs`). Never copy `templates/` by hand. `npm run doctor -- --json`
+reports what this computer is missing as JSON.
 
 ## Architecture (don't deviate)
 
